@@ -177,8 +177,7 @@ def generate_report():
             plt.close()
 
 
-    # Zapis raportu DOCX
-    full_path = os.path.join(OUT_DIR, "report.docx")
+    full_path = os.path.join(BASE_DIR, "report.docx")
     document.save(full_path)
     print(f"\nRaport zapisany jako: {full_path}")
 
