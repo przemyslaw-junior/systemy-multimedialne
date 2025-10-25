@@ -1,0 +1,270 @@
+Kwantyzacja obrazu i dithering
+Pliki do zajęć:
+
+Małe zdjęcia,
+Zdjęcia w skali odcieni szarości.
+Zadania
+Do zaimplementowania dla obrazów kolorowych i skali odcieni szarości:
+Funkcja colorFit działającą dla obrazu kolorowego i skali odcieni szarości, która dla podanego przez was koloru piksela zwróci najbliższy mu kolor z podanej palety kolorów. Funkcja przyjmuje na wejściu dwa parametry:
+
+wartość koloru
+paletę kolorów w formie tabeli Nx1 - dla obrazów w skali odcieni szarości lub Nx3 dla obrazów w RGB, gdzie N to ilość kolorów w palecie.
+Prawidłowo napisana funkcja wykorzystująca funkcje podpowiedziane w instrukcji powinna działać niezależnie od tego, czy podajecie mu dane w RGB, czy w skali odcieni szarości o ile będą to prawidłowo ustawione dane. (0,2 pkt)
+
+Trzy funkcje realizujące dithering. Poprawnie napisane funkcje powinny działać jednakowo zarówno dla obrazów kolorowych, jak i tych w skali odcieni szarości, o ile dostaną one dostarczoną odpowiednią paletę. (0,3 pkt):
+
+Losowy (dla obrazów binarnych = jedna warstwa)
+Zorganizowany dla co najmniej M2 (macierz o rozmiarze 4x4) [dla float r=1, ale możecie również przetestować inne parametry]
+Floyd–Steinberga
+Do testowania poprawności działania algorytmów w instrukcji znajduje się linijka testowa dla dowolnego obrazu w skali odcieni szarości. Proszę ją wykorzystać, żeby upewnić się, że wasze algorytmy działają w sposób prawidłowy.
+
+Przebadać skuteczność działania poprawnie wykonanych funkcji ditheringu na załączonych próbkach. Wybrać 4 zdjęcia kolorowe z dołączonych oraz wszystkie w skali odcieni szarości (są tylko 3 i trzeba je przeliczyć do 1 warstwy) — tu zawsze proszę przetestować na głowie figury i porównać wynik działania z wynikami zaprezentowanymi w instrukcji, żeby mieć pewność, że macie poprawne wyniki. (0,5 pkt)
+Porównać działanie algorytmów oraz czystej kwantyzacji:
+Dla danych w skali odcieni szarości zapisanych na 1,2 oraz 4 bitach.
+Dla danych kolorowych wykorzystać podane w instrukcji palety kolorów (8,16 - kolorów).
+Do oddania
+kod źródłowy (jeden plik .py)
+sprawozdanie z obserwacjami i wynikami w formacie PDF
+Kwantyzacja
+Kwantyzacja to nazwa grupy przekształceń sygnałów (np. dźwięku, obrazu, wartości odczytanej z czujnika), która zmniejsza precyzję sygnałów, aby mogły one zostać przetworzone przez jakieś urządzenie. W ramach zajęć będziemy zmniejszać rozdzielczość bitową obrazu poprzez zmniejszanie ilości bitów, na jakich będzie zapisany pojedynczy piksel naszego obrazu. Będziemy również testować skuteczność algorytmów, które mają na celu poprawę jakości wyświetlania/drukowania obrazów przy bardzo małej ilości informacji jednak zwiększając ich czytelność w stosunku do czystej kwantyzacji.
+
+W celu ułatwienia pracy i uniknięcia problemów przy pracy z niektórymi algorytmami można pracować na zmiennoprzecinkowym typie danych float (zakres 
+). Należy tylko pilnować, żeby po redukcji rozdzielczości bitowej, aby ilość wartości naszego obrazu nie przekraczała założonej ilości. Przykładowo dla 4-bitowej dokładności wartości koloru powinno być 16 (
+). Można to w łatwy sposób sprawdzić przy wykorzystaniu funkcji:
+
+np.unique(zmienna).size
+Kwantyzacja przy użyciu dopasowywania do wzorca lub poszukiwanie najbliższych wartości koloru w palecie
+Na początku zajmijmy się opracowaniem prostej metody, która będzie miała na celu zalezienie w podanej przez nas palecie koloru najbliższego dla wartości piksela, który aktualnie analizujemy. Naszą funkcję będziemy wstępnie opracowywać dla danych testowych, zakładamy, że nasze dane są dostarczane w formacie float 
+. Na początek zadeklarujmy sobie naszą wstępną paletę zawierającą 
+ wartości:
+
+    paleta = np.linspace(0,1,N).reshape(N,1)
+    print(paleta) #można usunać
+Po wywołaniu tego fragmentu kodu mamy dostępny kolumnowy wektor N-elementowy, zawierający wartości z zakresu naszego koloru. Jeżeli chcecie zmienić zakres na uint8 to trzeba przesunąć górną granicę zmiennej oraz zrzutować całość na uint8. Na początek ustawmy sobie 
+. Jakie mamy wartości w naszej palecie?
+
+Zacznijmy od zadeklarowania naszej funkcji:
+
+def colorFit(pixel,Pallet):
+        pass
+Nasza funkcja nie będzie potrzebowała do działania żadnych pętli i będzie działała niezależnie od ilości kolorów (tak długo, jak ilość kolorów pikseli i palety będzie taka sama). Zacznijmy od omówienia podejścia:
+
+Zakładamy, że traktujemy nasze kolory jako punkty w przestrzeni. Żeby policzyć, który z tych punktów z palety jest najbliżej naszego piksela, potrzebujemy odległości między nimi. Odległość ta jest długością wektora pomiędzy nimi. Z matematyki powinniście wiedzieć, że aby stworzyć wektor pomiędzy dwoma punktami i od razu przesunąć jego początek do centrum osi współrzędnych, to należy odjąć jeden punkt od drugiego. Nasze środowisko NumPy daje nam możliwość wykonania tej operacji od razu dla całej tablicy. Co dostajemy poniżej:
+
+print(Pallet-pixel)
+Dla przypadku jednowymiarowego, czyli palety dla obrazu w skali odcieni szarości mamy już dostateczną ilość informacji, ale nasza funkcja ma działać w sposób kompleksowy, czyli dla wszystkich ilości kolorów. Dlatego potrzebujemy wyliczyć odległość pomiędzy naszymi kolorami do tego celu najlepiej wykorzystać funkcję liczącą odległość euklidesową dla naszego wektora:
+
+np.linalg.norm(?,axis=1)
+Na tej podstawie bez względu ile mamy kolorów (skala odcieni szarości, RGB, CMYK itd.) na tym etapie będziemy dysponować wektorem wartości. Teraz musimy znaleźć najmniejszą wartość w naszym wektorze. Do tego celu sugeruję wykorzystać poniższą funkcję.
+
+np.argmin()
+Jeżeli wykorzystacie powyższe funkcje, to cała funkcja może składać się z 1 linii (maksymalnie 3) i działać dla dowolnej ilości kolorów (o ile ilość kolumn będzie równa ilości warstw). Poniżej kilka przykładów działania:
+
+paleta = np.linspace(0,1,3).reshape(3,1)
+print(colorFit(0.43,paleta)) # 0.5
+print(colorFit(0.66,paleta)) # ?
+print(colorFit(0.8,paleta)) # ?
+Przedefiniowane palety kolorów
+Paleta 8 kolorów ([R, G, B]):
+
+pallet8 = np.array([
+        [0.0, 0.0, 0.0,],
+        [0.0, 0.0, 1.0,],
+        [0.0, 1.0, 0.0,],
+        [0.0, 1.0, 1.0,],
+        [1.0, 0.0, 0.0,],
+        [1.0, 0.0, 1.0,],
+        [1.0, 1.0, 0.0,],
+        [1.0, 1.0, 1.0,],
+])
+Paleta 16 kolorów [web safe] ([R, G, B]):
+
+pallet16 =  np.array([
+        [0.0, 0.0, 0.0,], 
+        [0.0, 1.0, 1.0,],
+        [0.0, 0.0, 1.0,],
+        [1.0, 0.0, 1.0,],
+        [0.0, 0.5, 0.0,], 
+        [0.5, 0.5, 0.5,],
+        [0.0, 1.0, 0.0,],
+        [0.5, 0.0, 0.0,],
+        [0.0, 0.0, 0.5,],
+        [0.5, 0.5, 0.0,],
+        [0.5, 0.0, 0.5,],
+        [1.0, 0.0, 0.0,],
+        [0.75, 0.75, 0.75,],
+        [0.0, 0.5, 0.5,],
+        [1.0, 1.0, 1.0,], 
+        [1.0, 1.0, 0.0,]
+])
+Co tu powinno się zwrócić?
+
+print(colorFit(np.array([0.25,0.25,0.5]),pallet8))
+print(colorFit(np.array([0.25,0.25,0.5]),pallet16))
+Wykorzystanie funkcji colorFit do kwantyzacji obrazu
+Do wykorzystania funkcji colorFit do kwantyzacji obrazu potrzebujemy dwie pętle po wierszach i po kolumnach. Dzięki właściwościom Python i NumPy nie potrzeba dodawać 3 pętli po warstwach, gdyż domyślnie zostaną one przekazane jako tablica.
+
+def kwant_colorFit(img,Pallet):
+        out_img = img.copy()
+        for w in range():
+                for k in range():
+                        out_img[w,k]=colorFit(img[w,k],Pallet)
+        return out_img
+Poniżej kilka przykładów redukcji rozdzielczości bitowej (kwantyzacji) dla obrazów kolorowych i w skali odcieni szarości.
+
+Przykłady kwantyzacji przy użyciu ColorFit
+Przykład zmiany rozdzielczości bitowej dla obrazów w skali odcieni szarości
+Przykład zmiany rozdzielczości bitowej dla obrazów w skali odcieni szarości
+Przykład zmiany rozdzielczości bitowej dla obrazów w skali odcieni szarości
+Przykład zmiany rozdzielczości bitowej dla obrazów w skali odcieni szarości
+Przykład zmiany rozdzielczości bitowej dla obrazów w skali odcieni szarości
+Przykład zmiany rozdzielczości bitowej dla obrazów w skali odcieni szarości
+Przykład zmiany rozdzielczości bitowej dla obrazów kolorowych
+Przykład zmiany rozdzielczości bitowej dla obrazów kolorowych
+Przykład zmiany rozdzielczości bitowej dla obrazów kolorowych
+Przykład zmiany rozdzielczości bitowej dla obrazów kolorowych
+Przykład zmiany rozdzielczości bitowej dla obrazów kolorowych
+Przykład zmiany rozdzielczości bitowej dla obrazów kolorowych
+Przykład zmiany rozdzielczości bitowej dla obrazów kolorowych
+Przykład zmiany rozdzielczości bitowej dla obrazów kolorowych
+Przykład zmiany rozdzielczości bitowej dla obrazów kolorowych
+Przykład zmiany rozdzielczości bitowej dla obrazów kolorowych
+Dithering
+Dithering to zamierzony efekt zastosowania szumu w celu zniwelowania błędu kwantyzacji. W trybie kolorowym próba stworzenia koloru poprzez kompozycję kilku barw z dostępnej palety, gdy kolor oryginalny nie może zostać bezpośrednio wyświetlony. W trybie czarno-białym podobna symulacja jak w trybie kolorowym, lecz z zastosowaniem do odcieni szarości. Przeanalizujemy tutaj kilka rozwiązań, mających na celu poprawię wyglądu obrazów w celu poprawy jakości wizualnej obrazów o zmniejszonej rozdzielczości bitowej. Wszystkie przykładowe wizualizacje opisanych tu metod zostały zebrane na końcu fragmentu opisującego Dithering.
+
+Dithering losowy dla obrazów binarnych
+Metoda tak naprawdę nadająca się tylko do obrazów binarnych. Metoda jest mało dokładna, ale posiada niską złożoność czasową i obliczeniową. Polega ona na generowaniu losowych wartości dla każdego ze sprawdzanych pikseli (można od razu wygenerować całą ich macierz o rozmiarze naszego obrazu) i sprawdzaniu, czy wartość piksela w skali odcieni szarości jest większa niż naszej losowej wartości i w zależności od wyniku oznaczania naszego nowego piksela jako czarny lub biały.
+
+Całą operację można wykonać bez użycia jakiejkolwiek pętli. Trzeba w tym celu wykorzystać pakiet NumPy. Całą procedurę wykonuje się w krokach:
+
+Generujemy macierz losowych wartości r=np.random.rand(wiersze,kolumny),
+Porównujemy nasz obraz z losowymi wartościami img>=r,
+Zamieniamy macierz logiczną na liczbową np. *1.
+Dithering zorganizowany
+Dithering zorganizowany wprowadza uporządkowane przesunięcia kolorów, wykorzystując do tego mapami progowania (Threshold map), zwane również macierze indeksowanymi lub macierzami Bayera. Macierze te można w dowolny sposób obracać i odbijać lustrzenie bez zmniejszania skuteczności algorytmu. Poniżej zaprezentowano mapy dla dwóch najmniejszych rozmiarów (współczynniki z przodu są również wyliczane w dalszych wzorach na podstawie rzędu wielkości macierzy 
+, czyli liczby w oznaczeniu 
+).
+
+ 
+
+STOSOWAĆ DOMYŚLNIE M_2
+
+ 
+
+ 
+
+Mapa progowania będzie służyła nam do zmiany źródłowych właściwości koloru. Dużo łatwiej będzie nam się pracować, jeżeli będziemy operować na wartościach przesunięcia. Dlatego przekształcimy naszą mapę do przestrzeni 
+, która ułatwi nam dalszą pracę. Wykorzystamy do tego poniższy wzór:
+
+Mpre = (M+1) / (2*n)**2 - 0.5
+Przykład obliczeń dla macierzy 
+:
+
+ 
+ 
+ 
+  
+ 
+
+Teraz potrzebujemy jeszcze funkcję kwantyfikująca, która pozwoli nam dopasować wartości nowych pikseli do naszej palety kolorów colorFit, którą omawialiśmy wcześniej. Sama funkcja wyliczania wartości dla nowych pikseli wygląda tak:
+
+
+ jest naszym nowym kolorem piksela, natomiast 
+ jest kolorem piksela obrazu oryginalnego. Współczynnik 
+ określa skalowanie koloru pomiędzy oryginalnymi wartościami pikseli a nową paletą. Mamy kilka możliwości, w jaki sposób wyliczyć parametr 
+:
+
+Jeżeli obie palety są w tym samym zakresie pikseli, parametr będzie wynosił 
+. Zakładamy, że właśnie w tym zakresie się poruszamy, gdy mamy zarówno paletę, jak i obraz w zakresie 
+. STOSOWAĆ DOMYŚLNIE TĘ WARTOŚĆ
+Wyliczone na podstawie ilości wartości przed i po transformacji 
+śćś
+śćś
+ 
+ czy z przeliczenia 255 wartości przed i 32 wartości po kwantyzacji wzór będzie się prezentował się mniej więcej tak: 
+ 
+. Nie do końca działa to dla obrazów na float, ale można z tym poeksperymentować.
+Cały algorytm powinien składać się z poniższych kroków:
+
+Przygotowujemy tablicę Mpre z wartościami 
+.
+Dla każdego z pikseli naszego obrazu znajdujemy odpowiadający mu piksel w tablicy Mpre. Przykładowo zakładamy, że używamy macierzy M2 o rozmiarze 
+. Pikselowi obrazu o adresie 
+, będzie odpowiadała wartość z macierzy Mpre z adresu 
+, ponieważ 
+ i 
+.
+Obliczmy wartość tymczasową naszego piksela dodając do jego wartości wartość z macierzy Mpre pomnożoną przez 
+.
+Na podstawie naszej wartości tymczasowych znajdujemy nowe wartości koloru przy wykorzystaniu funkcji ColorFit.
+W jaki sposób generować większe mapy progowania?
+Znając najmniejszą macierz 
+ (lub pisząc kod w sposób pozwalający generować już od wartości równej 0) możemy generować większe macierze z założeniem, że każdy kolejny poziom będzie dwukrotnie większy niż poprzedni. Służy do tego poniższy wzór, który możemy wywoływać rekurencyjnie.
+
+ 
+
+Dithering metodą Floyd–Steinberga
+Podstawą algorytmu Floyda-Steinberga jest rozpraszanie błędów wprowadzonej redukcji. Przy wykorzystaniu funkcji kwantyzującej (colorFit), przypisującej dowolnej barwie – barwę z palety docelowej. Metoda polega na stopniowym przekazywaniu błędu kwantyzacji do kolejnych pikseli zgodnie ze wskazanymi wagami. Przykład z wagami dla otoczenia piksela został zaprezentowany poniżej.
+
+ 
+ 
+ 
+ 
+ 
+
+Sam algorytm wyliczania wartości piksela (x,y) wraz z procedurą rozpraszania błędu kwantyzacji został zaprezentowany poniżej. Należy jednak pamiętać, że nie wszystkich miejscach mamy dostęp do wszystkich pikseli, aby przekazać błąd dalej — przy krawędziach obrazu. To nie znaczy, że mamy pomijać te fragmenty obrazu! Żeby algorytm działał poprawnie, należy go uzupełnić o odpowiednie ograniczenia (if-y), żeby propagować nasz błąd tylko do tych pikseli, do których mamy dostęp.
+
+oldpixel = img[x,y]
+newpixel = colorFit(oldpixel)
+img[x,y] = newpixel
+quant_error = oldpixel - newpixel
+img[x + 1,y    ] = img[x + 1,y    ] + quant_error × 7 / 16
+img[x - 1,y + 1] = img[x - 1,y + 1] + quant_error × 3 / 16
+img[x    ,y + 1] = img[x    ,y + 1] + quant_error × 5 / 16
+img[x + 1,y + 1] = img[x + 1,y + 1] + quant_error × 1 / 16
+Uwaga 1 pamiętajcie — Python zwraca zwykle referencję do zawartości macierzy, a nie samą wartość. Skopiowanie wartości odbywa się przy wykorzystaniu funkcji .copy().
+
+Uwaga 2 Pamiętajcie, że powyższy algorytm zakłada, że poruszacie się w kolejności wiersze->kolumny i propagujecie błąd w danym kierunku, czyli nie przekazujemy błędów do już odwiedzonych komórek. Czyli nie przekazujemy błędy, tylko to miejsc ze strzałkami, a nie do miejsc 
+.
+ 
+Jeżeli pętle mamy odwrotnie to błędy powinniśmy propagować w innym kierunku, żeby zachować odpowiednią logikę:
+ 
+
+Tutaj również można sprawdzić, czy dobrze propagujemy informacje przy użyciu funkcji np.unique. Jeżeli pojawiają się nam jakieś dodatkowe wartości poza oczekiwanymi, to znaczy, że prawdopodobnie propagujemy błąd w złą stronę i musimy odwrócić kolejność naszych pętli.
+
+print(np.unique(WASZ_DITHERING_FS(img.copy(),np.linspace(0,1,2).reshape(2,1))).size) // ==2
+Przykłady działania Ditheringu
+Przykładowy dithering dla 1 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 1 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 2 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 2 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 4 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 4 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 1 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 1 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 2 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 2 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 4 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 4 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 1 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 1 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 2 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 2 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 4 bitu koloru w skali odcieni szarości
+Przykładowy dithering dla 4 bitu koloru w skali odcieni szarości
+Przykładowy dithering obrazów kolorowych paleta 8 kolorów
+Przykładowy dithering obrazów kolorowych paleta 8 kolorów
+Przykładowy dithering obrazów kolorowych paleta 16 kolorów
+Przykładowy dithering obrazów kolorowych paleta 16 kolorów
+Przykładowy dithering obrazów kolorowych paleta 8 kolorów
+Przykładowy dithering obrazów kolorowych paleta 8 kolorów
+Przykładowy dithering obrazów kolorowych paleta 16 kolorów
+Przykładowy dithering obrazów kolorowych paleta 16 kolorów
+Przykładowy dithering obrazów kolorowych paleta 8 kolorów
+Przykładowy dithering obrazów kolorowych paleta 8 kolorów
+Przykładowy dithering obrazów kolorowych paleta 16 kolorów
+Przykładowy dithering obrazów kolorowych paleta 16 kolorów
+Przykładowy dithering obrazów kolorowych paleta 8 kolorów
+Przykładowy dithering obrazów kolorowych paleta 8 kolorów
+Przykładowy dithering obrazów kolorowych paleta 16 kolorów
+Przykładowy dithering obrazów kolorowych paleta 16 kolorów
