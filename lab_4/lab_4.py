@@ -4,10 +4,9 @@ import subprocess
 from pathlib import Path
 import numpy as np
 import matplotlib
-matplotlib.use("Agg")  # zapis do plików bez okna GUI
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# biblioteki audio i interpolacji
 try:
     import soundfile as sf
 except Exception:
@@ -15,17 +14,12 @@ except Exception:
 from scipy.io import wavfile
 from scipy.interpolate import interp1d
 
-# raport Word
 try:
     from docx import Document
     from docx.shared import Inches
 except Exception:
-    Document = None  # pozwala uruchomić bez docx (wtedy bez raportu)
+    Document = None
 
-
-# =========================
-#  Funkcje pomocnicze
-# =========================
 
 def ensure_output_dir(base: Path) -> Path:
     out = base / "output"
@@ -34,14 +28,12 @@ def ensure_output_dir(base: Path) -> Path:
 
 
 def to_mono_if_needed(x: np.ndarray) -> np.ndarray:
-    """Zwraca 1 kanał do wizualizacji (pierwszy) bez modyfikacji danych wejściowych."""
     if x.ndim == 2 and x.shape[1] >= 1:
         return x[:, 0]
     return x
 
 
 def dominant_freq(x: np.ndarray, fs: float) -> float:
-    """Prosta detekcja dominującej częstotliwości (dla okna kilku okresów)."""
     x_m = to_mono_if_needed(x)
     n = len(x_m)
     if n < 4 or fs <= 0:
@@ -51,7 +43,7 @@ def dominant_freq(x: np.ndarray, fs: float) -> float:
     mag = np.abs(X)
     if len(mag) < 3:
         return 0.0
-    idx = np.argmax(mag[1:]) + 1  # pomijamy DC
+    idx = np.argmax(mag[1:]) + 1
     return float(f[idx])
 
 
@@ -64,9 +56,7 @@ def plot_time_and_spectrum(
     periods: int = 5,
     overlay: dict[str, tuple[np.ndarray, float]] | None = None,
 ):
-    """Wykres czasu (kilka okresów dla sinusów) i pełne pół-widmo dB.
-    Gdy overlay!=None, rysuje porównanie z legendą.
-    """
+   
     x_base = to_mono_if_needed(x)
     n = len(x_base)
     if n == 0 or fs <= 0:
@@ -90,11 +80,9 @@ def plot_time_and_spectrum(
     plt.figure(figsize=(12, 5))
     plt.suptitle(title)
 
-    # wykres czasu
     plt.subplot(1, 2, 1)
     plt.plot(t, xw, lw=1.0, label="oryginal")
     if overlay:
-        # porównanie na osi czasu oryginału (interpolacja pomocnicza)
         for lab, (x2, fs2) in overlay.items():
             x2m = to_mono_if_needed(x2)
             m2 = len(x2m)
@@ -141,7 +129,6 @@ def safe_basename(path: Path) -> str:
 
 
 def load_wav(p: Path):
-    """Wczytuje WAV. Zwraca (fs, data np.ndarray float32/float64 lub int)."""
     if sf is not None:
         data, fs = sf.read(str(p), always_2d=False)
         return fs, data
@@ -151,7 +138,6 @@ def load_wav(p: Path):
 
 
 def aliasing_risk(signal: np.ndarray, fs: float, step: int) -> bool:
-    """Szacowanie ryzyka aliasingu: energia powyżej nowego Nyquista."""
     x = to_mono_if_needed(np.asarray(signal))
     n = len(x)
     if n < 8 or fs <= 0 or step < 1:
@@ -167,16 +153,9 @@ def aliasing_risk(signal: np.ndarray, fs: float, step: int) -> bool:
     return np.any(20 * np.log10(mag[mask] + 1e-12) > -30)
 
 
-# =========================
 #  Operacje sygnałowe
-# =========================
 
 def Kwant(data: np.ndarray, bits: int) -> np.ndarray:
-    """
-    Kwantyzacja danych do zadanej liczby bitów bez dopasowania do wzorca.
-    - automatyczne wykrywanie typu i zakresu (int/float)
-    - zwraca sygnał w tym samym zakresie wartości co wejście (przy int — rzutowanie z powrotem)
-    """
     if bits < 1:
         raise ValueError("Liczba bitow musi byc >= 1")
 
@@ -192,17 +171,15 @@ def Kwant(data: np.ndarray, bits: int) -> np.ndarray:
         if levels <= 1:
             return np.zeros_like(x)
         step = (x_max - x_min) / (levels - 1)
-        # równomierna siatka, zaokrąglenie do najbliższego poziomu
         q = np.round((x_float - x_min) / step) * step + x_min
         q = np.clip(q, x_min, x_max)
         return q.astype(x.dtype)
     else:
-        # float: zakres wyznaczamy z danych (bez narzucania np. -1..1)
         x_float = x.astype(np.float64)
         x_min = float(np.nanmin(x_float))
         x_max = float(np.nanmax(x_float))
         if not np.isfinite(x_min) or not np.isfinite(x_max) or x_max == x_min:
-            return x_float  # brak sensownej kwantyzacji
+            return x_float
         levels = 2 ** bits
         step = (x_max - x_min) / (levels - 1)
         q = np.round((x_float - x_min) / step) * step + x_min
@@ -211,12 +188,6 @@ def Kwant(data: np.ndarray, bits: int) -> np.ndarray:
 
 
 def Decymacja(signal: np.ndarray, step: int, fs: float | None = None):
-    """
-    Prosta decymacja: wybieramy co n-tą próbkę (x[::step]).
-    Zwraca (y, new_fs) jeśli podano fs, inaczej tylko y.
-    Uwaga: Specyfikacja z instrukcji mówi o zwróceniu także fs —
-    w kodzie głównym przekazujemy fs, żeby zwrócić krotkę.
-    """
     if step < 1:
         raise ValueError("Krok decymacji musi byc >= 1")
     y = signal[::step]
@@ -226,12 +197,6 @@ def Decymacja(signal: np.ndarray, step: int, fs: float | None = None):
 
 
 def Interpolacja(signal: np.ndarray, old_fs: float, new_fs: float, metoda: str = "linear") -> tuple[np.ndarray, float]:
-    """
-    Zmiana częstotliwości próbkowania z użyciem scipy.interpolate.interp1d.
-    - metoda: 'linear' lub 'cubic'
-    - generowane są nowe punkty czasowe tak, aby długość ~ N * new_fs/old_fs (endpoint=False)
-    Zwraca (y, new_fs)
-    """
     if old_fs <= 0 or new_fs <= 0:
         raise ValueError("Czestotliwosci musza byc dodatnie")
 
@@ -264,9 +229,7 @@ def Interpolacja(signal: np.ndarray, old_fs: float, new_fs: float, metoda: str =
     return y.astype(x.dtype), new_fs
 
 
-# =========================
-#  Konfiguracje eksperymentów
-# =========================
+#  Eksperymenty
 
 SIN_QUANT_BITS = [4, 8, 16, 24]
 SIN_DEC_STEPS = [2, 4, 6, 10, 24]
@@ -277,9 +240,7 @@ SING_DEC_STEPS = [4, 6, 10, 24]
 SING_INTERP_FS = [4000, 8000, 11999, 16000, 16953]
 
 
-# =========================
 #  Przetwarzanie wsadowe i raport
-# =========================
 
 def process_file_quant(fs: float, data: np.ndarray, base_out: Path, base_name: str, bits: int, make_compare: bool = False) -> tuple[Path, Path | None]:
     y = Kwant(data, bits)
@@ -324,7 +285,6 @@ def process_file_interp(fs: float, data: np.ndarray, base_out: Path, base_name: 
 
 
 def export_pdf(docx_path: Path, out_dir: Path):
-    """Eksport do PDF przez pypandoc lub LibreOffice (jeśli dostępne)."""
     try:
         import pypandoc  # type: ignore
         pdf_path = out_dir / "report.pdf"
@@ -351,7 +311,6 @@ def export_pdf(docx_path: Path, out_dir: Path):
 
 
 def build_report(output_dir: Path, examples: dict, run_info: dict):
-    """Tworzy raport Word + (opcjonalnie) PDF, z listą plików, parametrami i tabelą obserwacji."""
     if Document is None:
         print("[INFO] python-docx nie jest dostepne - pomijam raport.")
         return
@@ -364,7 +323,6 @@ def build_report(output_dir: Path, examples: dict, run_info: dict):
         "Dane wejściowe wczytano z plików WAV. Dla każdej operacji utworzono wykresy w dziedzinie czasu i widma (połowa, dB)."
     )
 
-    # Lista plików i parametry
     doc.add_heading("Dane i parametry testów", level=1)
     doc.add_paragraph("Pliki SIN:")
     for n in run_info.get("files_sin", []):
@@ -381,7 +339,6 @@ def build_report(output_dir: Path, examples: dict, run_info: dict):
     p = doc.add_paragraph(); p.style = 'List Bullet'; p.add_run(f"Decymacja (SING): {SING_DEC_STEPS}")
     p = doc.add_paragraph(); p.style = 'List Bullet'; p.add_run(f"Interpolacja (SING): {SING_INTERP_FS} Hz, metody: linear, cubic")
 
-    # Sekcje merytoryczne + przykładowe wykresy
     doc.add_heading("Kwantyzacja", level=1)
     doc.add_paragraph(
         "Kwantyzacja polega na ograniczeniu liczby poziomów amplitudy sygnału do 2^N, gdzie N to liczba bitów. "
@@ -407,7 +364,6 @@ def build_report(output_dir: Path, examples: dict, run_info: dict):
         try: doc.add_picture(str(pth), width=Inches(5.6))
         except Exception: pass
 
-    # Tabela obserwacji z odsłuchu
     doc.add_heading("Obserwacje z odsłuchu (SING)", level=1)
     table = doc.add_table(rows=1, cols=4)
     hdr = table.rows[0].cells
@@ -421,23 +377,19 @@ def build_report(output_dir: Path, examples: dict, run_info: dict):
     add_row("sing_mid", "decymacja", "x10", "Słyszalny aliasing i ubytek wysokich częstotliwości.")
     add_row("sing_high", "interpolacja", "cubic 16 kHz", "Gładszy przebieg niż liniowa, bez odzyskiwania utraconych składowych.")
 
-    # Wszystkie wykresy (czas + widmo) — pełna lista
     doc.add_heading("Wszystkie wykresy (czas + widmo)", level=1)
     all_plots = sorted(output_dir.glob("plot_*.png"))
     count = 0
     for img in all_plots:
-        # podpis z nazwą pliku
         doc.add_paragraph(img.name)
         try:
             doc.add_picture(str(img), width=Inches(5.0))
         except Exception:
             pass
         count += 1
-        # dzielimy dokument co kilkanaście grafik dla czytelności
         if count % 12 == 0:
             doc.add_page_break()
 
-    # Wnioski
     doc.add_heading("Wnioski końcowe", level=1)
     doc.add_paragraph(
         "Liczba bitów istotnie wpływa na poziom szumu kwantyzacji (im więcej bitów, tym lepsza jakość). "
@@ -449,7 +401,6 @@ def build_report(output_dir: Path, examples: dict, run_info: dict):
     doc.save(str(report_path))
     print(f"[OK] Zapisano raport: {report_path}")
 
-    # PDF (opcjonalnie)
     export_pdf(report_path, output_dir)
 
 
