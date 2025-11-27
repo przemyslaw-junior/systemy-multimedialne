@@ -1,13 +1,3 @@
-"""
-Lossy audio compression utilities: A-law, μ-law, DPCM (with/without prediction)
-
-The module implements:
-- Vectorised A-law and μ-law companders (no Python loops, logical indexing)
-- DPCM encoders/decoders with interchangeable predictors
-- Automated experiment runner across bit-depths and multiple files
-- Validation plots and PDF report generation
-"""
-
 from __future__ import annotations
 
 import csv
@@ -17,6 +7,14 @@ from typing import Callable, Dict, Iterable, List, Tuple
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib import rcParams
+
+try:
+    from docx import Document
+    from docx.shared import Inches
+except Exception:
+    Document = None
+    Inches = None
 
 BASE_DIR = Path(__file__).parent
 RESULTS_DIR = BASE_DIR / "results"
@@ -24,24 +22,22 @@ PLOTS_DIR = RESULTS_DIR / "plots"
 AUDIO_DIR = RESULTS_DIR / "audio"
 TABLE_DIR = RESULTS_DIR / "tables"
 
+HEAD_COLOR = "#1f497d"
+BODY_FONT = "DejaVu Sans"
+HEAD_SIZE = 18
+SUBHEAD_SIZE = 12
+BODY_SIZE = 10
+FIGSIZE_A4 = (8.27, 11.69)  # w calach
 
-# -----------------------------------------------------------------------------#
+
 # Generic helpers
-# -----------------------------------------------------------------------------#
-
 
 def ensure_dirs() -> None:
-    """Create all result directories if they do not exist."""
     for d in (RESULTS_DIR, PLOTS_DIR, AUDIO_DIR, TABLE_DIR):
         d.mkdir(parents=True, exist_ok=True)
 
 
 def quantize_uniform(x: np.ndarray, bits: int = 8, vmin: float = -1.0, vmax: float = 1.0) -> np.ndarray:
-    """
-    Uniform mid-tread quantization to `bits` bits within [vmin, vmax].
-
-    Uses vectorised rounding; output is clipped to the provided range.
-    """
     x = np.asarray(x, dtype=np.float64)
     levels = 2 ** bits
     step = (vmax - vmin) / (levels - 1)
@@ -50,10 +46,7 @@ def quantize_uniform(x: np.ndarray, bits: int = 8, vmin: float = -1.0, vmax: flo
     return np.clip(quantized, vmin, vmax).astype(np.float32)
 
 
-# -----------------------------------------------------------------------------#
 # A-law and μ-law companders (vectorised, logical indexing)
-# -----------------------------------------------------------------------------#
-
 
 def a_law_encode(x: np.ndarray, A: float = 87.6) -> np.ndarray:
     """Vectorised A-law companding; input is clipped to [-1, 1]."""
@@ -126,10 +119,7 @@ def mu_law_decompress(q: np.ndarray, mu: float = 255.0) -> np.ndarray:
     return mu_law_decode(q, mu)
 
 
-# -----------------------------------------------------------------------------#
 # DPCM (Differential Pulse Code Modulation)
-# -----------------------------------------------------------------------------#
-
 
 def _predict_last(x_prev: np.ndarray, n: int | None = None) -> float:
     """Predictor returning the last reconstructed sample (or 0 for empty history)."""
@@ -179,7 +169,6 @@ def dpcm_encode_pred(
     predictor: Callable[[np.ndarray, int], float] = _predict_mean,
     n: int = 3,
 ) -> np.ndarray:
-    """DPCM with a modular predictor (default: mean of last n samples)."""
     x = np.asarray(x, dtype=np.float64)
     diffs = np.empty_like(x)
     recon_local = np.empty_like(x)
@@ -203,7 +192,6 @@ def dpcm_decode_pred(
     predictor: Callable[[np.ndarray, int], float] = _predict_mean,
     n: int = 3,
 ) -> np.ndarray:
-    """Decode DPCM stream using the same predictor as the encoder."""
     diffs = np.asarray(diffs, dtype=np.float64)
     recon = np.empty_like(diffs)
     for i, d in enumerate(diffs):
@@ -212,10 +200,7 @@ def dpcm_decode_pred(
     return np.clip(recon, -1.0, 1.0).astype(np.float32)
 
 
-# -----------------------------------------------------------------------------#
 # Evaluation utilities
-# -----------------------------------------------------------------------------#
-
 
 def mse(x: np.ndarray, y: np.ndarray) -> float:
     """Mean squared error."""
@@ -234,7 +219,6 @@ def snr_db(x: np.ndarray, x_hat: np.ndarray, eps: float = 1e-12) -> float:
 
 
 def subjective_grade(snr_value: float) -> str:
-    """Heuristic listening-grade based on SNR."""
     if snr_value >= 35:
         return "transparent"
     if snr_value >= 25:
@@ -246,13 +230,7 @@ def subjective_grade(snr_value: float) -> str:
     return "poor / distorted"
 
 
-# -----------------------------------------------------------------------------#
-# Plotting helpers (validation and experiment visuals)
-# -----------------------------------------------------------------------------#
-
-
 def compander_validation_plots(bits: int = 8, out_dir: Path = PLOTS_DIR) -> Path:
-    """Generate full-range and zoomed validation plots for A-law and μ-law."""
     out_dir.mkdir(parents=True, exist_ok=True)
     x = np.linspace(-1, 1, 4000)
     companders = [
@@ -294,7 +272,6 @@ def compander_validation_plots(bits: int = 8, out_dir: Path = PLOTS_DIR) -> Path
 
 
 def dpcm_validation_plots(bits: int = 6, out_dir: Path = PLOTS_DIR) -> Path:
-    """Generate validation plots for DPCM with/without prediction on a test sinusoid."""
     out_dir.mkdir(parents=True, exist_ok=True)
     x = np.linspace(0, 1, 1500)
     y = 0.9 * np.sin(np.pi * x * 4)
@@ -335,7 +312,6 @@ def waveform_plot(
     out_path: Path,
     nsamples: int = 2000,
 ) -> None:
-    """Save overlay waveform plots for original and reconstructed signals."""
     t = np.arange(min(len(x), nsamples)) / float(sr)
     plt.figure(figsize=(10, 6))
     plt.plot(t, x[:nsamples], label="original", linewidth=1.2)
@@ -351,13 +327,7 @@ def waveform_plot(
     plt.close()
 
 
-# -----------------------------------------------------------------------------#
-# Audio I/O and experiment runner
-# -----------------------------------------------------------------------------#
-
-
 def load_audio(path: Path) -> Tuple[int, np.ndarray, float, bool]:
-    """Load audio as float32 in [-1, 1]. Returns (sr, data_float, norm, is_int)."""
     from scipy.io import wavfile
 
     sr, data = wavfile.read(path)
@@ -372,7 +342,6 @@ def load_audio(path: Path) -> Tuple[int, np.ndarray, float, bool]:
 
 
 def save_audio(path: Path, sr: int, data: np.ndarray, norm: float, as_int: bool) -> None:
-    """Save audio either as original integer type or float32."""
     from scipy.io import wavfile
 
     if as_int:
@@ -383,7 +352,6 @@ def save_audio(path: Path, sr: int, data: np.ndarray, norm: float, as_int: bool)
 
 
 def process_method(x: np.ndarray, bits: int, method: str, pred_n: int = 3) -> np.ndarray:
-    """Dispatch table for all supported methods."""
     if method == "a_law":
         return a_law_decompress(a_law_compress(x, bits))
     if method == "mu_law":
@@ -409,11 +377,6 @@ def run_experiments(
     out_audio_dir: Path = AUDIO_DIR,
     out_plot_dir: Path = PLOTS_DIR,
 ) -> List[Dict[str, object]]:
-    """
-    Run full experiment grid: files × bits × methods.
-
-    Returns a list of result dictionaries for CSV/table generation.
-    """
     ensure_dirs()
     out_audio_dir.mkdir(parents=True, exist_ok=True)
     out_plot_dir.mkdir(parents=True, exist_ok=True)
@@ -434,7 +397,6 @@ def run_experiments(
                 for m in methods:
                     recon_channels[m][:, ch] = process_method(xch, bits, method=m, pred_n=3)
 
-            # save audio outputs
             for m in methods:
                 save_audio(
                     out_audio_dir / f"{audio_path.stem}_{m}_{bits}bit.wav",
@@ -444,7 +406,6 @@ def run_experiments(
                     as_int=is_int,
                 )
 
-            # compute metrics on mono mix for simplicity
             x_mono = np.mean(data_f, axis=1)
             for m in methods:
                 y_mono = np.mean(recon_channels[m], axis=1)
@@ -461,7 +422,6 @@ def run_experiments(
                     }
                 )
 
-            # waveform plot per bits/file
             wav_plot_path = out_plot_dir / f"waveform_{audio_path.stem}_{bits}bit.png"
             waveform_plot(
                 x=np.mean(data_f, axis=1),
@@ -475,13 +435,8 @@ def run_experiments(
     return results
 
 
-# -----------------------------------------------------------------------------#
-# Tables, CSV export, recognizability matrix
-# -----------------------------------------------------------------------------#
-
 
 def save_results_csv(results: List[Dict[str, object]], path: Path = TABLE_DIR / "results.csv") -> None:
-    """Save all numeric results to CSV."""
     if not results:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -493,9 +448,6 @@ def save_results_csv(results: List[Dict[str, object]], path: Path = TABLE_DIR / 
 
 
 def recognizability_table(results: List[Dict[str, object]]) -> Dict[str, Dict[int, str]]:
-    """
-    Build a table: rows = file, columns = bit depth, values = best subjective grade.
-    """
     table: Dict[str, Dict[int, str]] = {}
     for row in results:
         fname = row["file"]
@@ -514,13 +466,7 @@ def recognizability_table(results: List[Dict[str, object]]) -> Dict[str, Dict[in
     return table
 
 
-# -----------------------------------------------------------------------------#
-# PDF report generation
-# -----------------------------------------------------------------------------#
-
-
 def _table_figure(table: Dict[str, Dict[int, str]], bits_list: List[int]) -> Path:
-    """Create a plot with a recognizability table and return image path."""
     fig, ax = plt.subplots(figsize=(10, 0.6 * (len(table) + 2)))
     ax.axis("off")
     rows = list(table.keys())
@@ -546,89 +492,117 @@ def _table_figure(table: Dict[str, Dict[int, str]], bits_list: List[int]) -> Pat
     return img_path
 
 
-def build_pdf_report(
+def _init_report_style() -> None:
+    rcParams.update(
+        {
+            "font.family": BODY_FONT,
+            "font.size": BODY_SIZE,
+            "axes.titlesize": SUBHEAD_SIZE,
+            "axes.labelsize": BODY_SIZE,
+        }
+    )
+
+
+def _text_block(y: float, text: str, size: int = BODY_SIZE, color: str = "black", weight: str = "normal") -> float:
+    plt.text(0.05, y, text, ha="left", va="top", wrap=True, fontsize=size, color=color, fontweight=weight)
+    return y - 0.05
+
+
+def _add_cover_page(pdf: PdfPages, title: str, subtitle: str, body: str) -> None:
+    fig = plt.figure(figsize=FIGSIZE_A4)
+    plt.axis("off")
+    y = 0.92
+    plt.text(0.05, y, title, ha="left", va="top", fontsize=HEAD_SIZE, color=HEAD_COLOR, fontweight="bold")
+    y -= 0.04
+    plt.plot([0.05, 0.6], [y, y], color=HEAD_COLOR, linewidth=1.5)
+    y -= 0.06
+    plt.text(0.05, y, subtitle, ha="left", va="top", fontsize=SUBHEAD_SIZE, color=HEAD_COLOR, fontweight="bold")
+    y -= 0.06
+    plt.text(0.05, y, body, ha="left", va="top", wrap=True, fontsize=BODY_SIZE, color="black", linespacing=1.4)
+    pdf.savefig(fig)
+    plt.close(fig)
+
+
+def _add_figure_page(pdf: PdfPages, img_path: Path, caption: str, fig_number: int) -> None:
+    fig = plt.figure(figsize=FIGSIZE_A4)
+    plt.axis("off")
+    img = plt.imread(img_path)
+    plt.imshow(img)
+    plt.axis("off")
+    plt.figtext(0.05, 0.08, f"Rys. {fig_number}: {caption}", ha="left", va="bottom", fontsize=BODY_SIZE, color="black")
+    pdf.savefig(fig)
+    plt.close(fig)
+
+
+def build_report_docx(
     results: List[Dict[str, object]],
     comp_plot: Path,
     dpcm_plot: Path,
     bits_list: List[int],
-    pdf_path: Path = RESULTS_DIR / "report_audio_compression.pdf",
+    path: Path = RESULTS_DIR / "report.docx",
 ) -> None:
-    """Generate a PDF report with summary, plots, and tables."""
+    if Document is None:
+        print("[INFO] python-docx niedostępne - pomijam raport DOCX.")
+        return
     ensure_dirs()
-    pdf_path.parent.mkdir(parents=True, exist_ok=True)
+    doc = Document()
+    doc.add_heading("Laboratorium 6 — Kompresja stratna audio (A-law, μ-law, DPCM)", level=0)
+    doc.add_paragraph(
+        "Celem jest porównanie metod kompresji stratnej audio: A-law, μ-law oraz DPCM z/bez predykcji. "
+        "Zbadano wpływ kwantyzacji (8-2 bity) na jakość sygnałów z trzech plików (low/medium/high). "
+        "Prezentowane są krzywe kompresji, wyniki SNR/MSE oraz ocena rozpoznawalności sygnału."
+    )
+
+    doc.add_heading("Uwagi dot. danych", level=1)
+    doc.add_paragraph(
+        "Sygnały wczytywane jako float32, kwantyzacja uniform 8..2 bitów. Predykcja w DPCM: średnia z n próbek."
+    )
+
+    doc.add_heading("Walidacja kompresji", level=1)
+    doc.add_paragraph("Krzywe A-law i μ-law (pełny zakres oraz zbliżenia):")
+    if comp_plot.exists() and Inches:
+        doc.add_picture(str(comp_plot), width=Inches(6))
+    doc.add_paragraph("DPCM - rekonstrukcja i błąd na sinusoidzie testowej:")
+    if dpcm_plot.exists() and Inches:
+        doc.add_picture(str(dpcm_plot), width=Inches(6))
+
+    doc.add_heading("Tabela rozpoznawalności (8..2 bity)", level=1)
     recog_table = recognizability_table(results)
     table_img = _table_figure(recog_table, bits_list)
+    if table_img.exists() and Inches:
+        doc.add_picture(str(table_img), width=Inches(5.5))
 
-    with PdfPages(pdf_path) as pdf:
-        fig1 = plt.figure(figsize=(8.5, 11))
-        plt.axis("off")
-        text = (
-            "Audio compression validation report\n"
-            "\nAlgorithms:\n"
-            " - A-law companding (vectorised, symmetric clipping)\n"
-            " - μ-law companding (vectorised, symmetric clipping)\n"
-            " - DPCM (predictor = previous sample)\n"
-            " - DPCM with predictor = mean of last n samples\n"
-            "\nExperiments: 3 audio files × 7 bit-depths (8..2) × 4 methods.\n"
-            "Metrics: MSE, SNR (dB), heuristic listening grade. Outputs saved under results/.\n"
-        )
-        plt.text(0.05, 0.95, text, ha="left", va="top", wrap=True, fontsize=11)
-        pdf.savefig(fig1)
-        plt.close(fig1)
+    doc.add_heading("Wyniki — SNR/MSE", level=1)
+    if results:
+        t = doc.add_table(rows=1, cols=6)
+        h = t.rows[0].cells
+        h[0].text = "Plik"
+        h[1].text = "Bity"
+        h[2].text = "Metoda"
+        h[3].text = "SNR [dB]"
+        h[4].text = "MSE"
+        h[5].text = "Subiektywna"
+        for r in results:
+            row = t.add_row().cells
+            row[0].text = str(r["file"])
+            row[1].text = str(r["bits"])
+            row[2].text = str(r["method"])
+            row[3].text = f"{r['snr_db']:.2f}"
+            row[4].text = f"{r['mse']:.2e}"
+            row[5].text = str(r.get("subjective", ""))
 
-        fig2 = plt.figure(figsize=(8.5, 11))
-        img = plt.imread(comp_plot)
-        plt.imshow(img)
-        plt.axis("off")
-        plt.title("A-law and μ-law validation (full/zoom/zero)", fontsize=12)
-        pdf.savefig(fig2)
-        plt.close(fig2)
+    doc.add_heading("Wnioski", level=1)
+    doc.add_paragraph(
+        "A-law/μ-law zachowują wysoką rozpoznawalność przy niższej liczbie bitów. "
+        "Predykcja w DPCM poprawia SNR dla wolnozmiennych sygnałów. "
+        "Poniżej 4 bitów jakość szybko degraduje się - odsłuch wskazany."
+    )
 
-        fig3 = plt.figure(figsize=(8.5, 11))
-        img = plt.imread(dpcm_plot)
-        plt.imshow(img)
-        plt.axis("off")
-        plt.title("DPCM validation on test sinusoid", fontsize=12)
-        pdf.savefig(fig3)
-        plt.close(fig3)
-
-        fig4 = plt.figure(figsize=(8.5, 11))
-        img = plt.imread(table_img)
-        plt.imshow(img)
-        plt.axis("off")
-        plt.title("Subjective recognizability vs bit-depth", fontsize=12)
-        pdf.savefig(fig4)
-        plt.close(fig4)
-
-        files = sorted({r["file"] for r in results})
-        for fname in files:
-            fig = plt.figure(figsize=(8.5, 6))
-            plt.title(f"SNR summary: {fname}")
-            rows = [r for r in results if r["file"] == fname]
-            for method in ["a_law", "mu_law", "dpcm_np1", "dpcm_np3"]:
-                xs, ys = [], []
-                for r in rows:
-                    if r["method"] == method:
-                        xs.append(r["bits"])
-                        ys.append(r["snr_db"])
-                plt.plot(xs, ys, marker="o", label=method)
-            plt.xlabel("bit-depth")
-            plt.ylabel("SNR [dB]")
-            plt.gca().invert_xaxis()
-            plt.grid(True, linestyle=":")
-            plt.legend()
-            plt.tight_layout()
-            pdf.savefig(fig)
-            plt.close(fig)
-
-
-# -----------------------------------------------------------------------------#
-# Main orchestration
-# -----------------------------------------------------------------------------#
+    doc.save(str(path))
+    print(f"[OK] Zapisano raport DOCX: {path}")
 
 
 def run_all() -> None:
-    """Run validation plots, full experiments, CSV export, and PDF report."""
     ensure_dirs()
     bits_list = [8, 7, 6, 5, 4, 3, 2]
 
@@ -645,7 +619,8 @@ def run_all() -> None:
     dpcm_plot = dpcm_validation_plots(bits=6, out_dir=PLOTS_DIR)
     results = run_experiments(audio_files=audio_files, bits_list=bits_list)
     save_results_csv(results, path=TABLE_DIR / "results.csv")
-    build_pdf_report(results, comp_plot=comp_plot, dpcm_plot=dpcm_plot, bits_list=bits_list)
+    # Raport w stylu lab 5 (DOCX)
+    build_report_docx(results, comp_plot=comp_plot, dpcm_plot=dpcm_plot, bits_list=bits_list)
 
 
 if __name__ == "__main__":
