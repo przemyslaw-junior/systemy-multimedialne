@@ -1,0 +1,118 @@
+Wstęp
+Celem laboratorium było oszacowanie pojemności informacyjnej wybranych nośników danych oraz przeliczenie wielkości różnych zbiorów informacji na te nośniki, przy założeniu kodowania UTF-16 (2 bajty na znak). Zastosowano ujednolicone jednostki: bajty dla pojemności, gramy i kilogramy dla masy, centymetry sześcienne dla objętości oraz milimetry dla wysokości stosu nośników. Wszystkie szacunki oparto na obliczeniach i udokumentowanych odnośnikach. Własne pomiary (np. kartka A4) wykonano w MS Office, a odpowiednie zrzuty ekranu zamieszczono w załączniku.
+Część pierwsza — informacje referencyjne
+W pierwszym etapie zestawiono parametry wybranych nośników danych wraz z modelami referencyjnymi. Fotografie i zrzuty ekranu znajdują się w załączniku.
+Kartka A4 (papier 80 gsm, czcionka 12, marginesy 2,5 cm, jednostronnie).
+Pojemność tekstowa:
+250 słów/stronę × 5 znaków/słowo × 2 bajty (UTF-16) = 2500 bajtów.
+Masa: 5 g (ream 500 arkuszy = 2,5 kg).
+Wymiary: 210×297×0,1 mm → objętość 6,2 cm³.
+Cena: 0,01 zł.
+Dysk HDD 4 TB (Seagate ST4000NM0115).
+Pojemność: 4×10¹² bajtów.
+Masa: 1,4 kg.
+Wysokość: 26,1 mm.
+Objętość: ok. 390 cm³.
+Cena: 500 zł.
+Dysk SSD 128 GB (Verbatim Vi550 S3).
+Pojemność: 1,28×10¹¹ bajtów.
+Masa: 45 g.
+Wysokość: 7 mm.
+Objętość: 49 cm³.
+Cena: 100 zł.
+Płyta CD (Verbatim 700 MB).
+Pojemność: 7×10⁸ bajtów.
+Masa: 15–20 g.
+Wysokość: 1,2 mm.
+Objętość: π×(6 cm)²×0,12 cm ≈ 13,6 cm³.
+Cena: 1 zł.
+Płyta DVD (standard single-layer).
+Pojemność: 4,7×10⁹ bajtów.
+Masa: 16 g.
+Wysokość: 1,2 mm.
+Objętość: 13,6 cm³.
+Cena: 2 zł.
+Karta microSD 128 GB (SanDisk Ultra SDXC).
+Pojemność: 1,28×10¹¹ bajtów.
+Masa: 0,5 g.
+Wysokość: 1 mm.
+Objętość: 15×11×1 mm = 0,165 cm³.
+Cena: 50 zł.
+Część druga — szacowanie wielkości danych
+W tej części oszacowano wielkość wybranych zbiorów danych. Obliczenia pośrednie przedstawiono poniżej; zdjęcia, zrzuty ekranu i materiały źródłowe znajdują się w załączniku.
+Książka beletrystyczna (np. powieść ~90 tys. słów).
+90 000 słów × 6 znaków/słowo = 540 000 znaków × 2 bajty = 1,08 MB.
+Masa: ok. 400 g.
+Cena: ok. 40 zł.
+Encyklopedia Britannica.
+44 mln słów × 6,3 znaku/słowo = 277 mln znaków → 554 MB.
+Wikipedia (angielska i polska).
+Angielska:
+6,5 mln artykułów × 450 słów × 6 znaków = 17,5 mld znaków → 35 TB.
+Polska:
+1,8 mln artykułów → ok. 10 TB.
+Zdjęcie 108 Mpix (12 000×9000 px, 24 bit/piksel).
+108×10⁶ pikseli × 24 bity/8 = 324 MB.
+Nieskompresowany film 1,5 h (5400 s).
+    • VHS PAL (720×576 px, 25 fps, 1,5 bajta/piksel):
+720×576×25×5400×1,5 ≈ 210 GB.
+    • FullHD (1920×1080, 30 fps, 3 bajty/piksel):
+1920×1080×30×5400×3 ≈ 100 TB.
+    • 4K (3840×2160, 30 fps):
+4× FullHD → 400 TB.
+YouTube.
+500 godzin uploadów na godzinę × 5 GB/h (bitrate 6 Mbps, 1080p/4K) =
+2500 GB nowego materiału na godzinę.
+Część trzecia — przeliczenie danych na nośniki
+Przeliczenia wykonano na najmniejszy możliwy nośnik spełniający wymagania pojemności. Wszystkie wartości zaokrąglono w górę. Tabela obejmuje koszt całkowity, masę, wysokość stosu oraz objętość.
+Dane	Nośnik	Ilość	Cena (zł)	Masa	Wys. stosu	Objętość
+Książka (1,08 MB)	CD	1	1	20 g	1,2 mm	0,000014 m³
+Wikipedia angielska (35 TB)	HDD 4 TB	8750	4 375 000	12,25 t	229 m	3,4 m³
+Film 4K 1,5 h (400 TB)	HDD 4 TB	100 000	50 000 000	140 t	2,61 km	39 000 m³
+
+Źródła
+Poniższe zestawienie obejmuje wszystkie materiały źródłowe wykorzystane do oszacowania parametrów nośników danych, masy i objętości obiektów, długości tekstów oraz wielkości danych multimedialnych. Linki prowadzą do stron zawierających specyfikacje techniczne, dane katalogowe, statystyki oraz materiały pomocnicze użyte w obliczeniach.
+Parametry papieru A4 – masa, grubość, właściwości
+    • https://neo-online.co.uk/how-heavy-is-a-ream-of-a4-paper/
+    • https://4yougorlice.pl/grubosc-kartki-papieru-a4-wplyw-na-jakosc-i-zastosowanie
+    • https://www.biurowi.pl/ryza-papieru-a4-wszystko-co-musisz-wiedziec
+    • https://mcsofficesupplies.co.za/typek-a4-paper-ream
+Liczba znaków na stronie A4 (czcionka 12, marginesy standardowe)
+    • https://wordcounter.net/words-per-page
+
+Dysk HDD 4 TB – specyfikacje i parametry
+    • https://smicro.pl/seagate-enterprise-capacity-hdd-4tb-3-5-7200rpm-128mb-512e-sata-iii-st4000nm0115-3
+    • https://www.delkomtech.pl/aktualnosci/nosniki-danych-ktore-wyrozniaja-sie-najwieksza-trwaloscia/
+    • https://www.newegg.com/seagate-st4000nm0055-4tb/p/N82E16822179061
+Dysk SSD 128 GB – specyfikacje i właściwości pamięci flash
+    • https://www.verbatim-europe.com/en/internal-ssd/products/vi550-s3-ssd-128gb-49350
+    • https://www.delkomtech.pl/aktualnosci/nosniki-danych-ktore-wyrozniaja-sie-najwieksza-trwaloscia/
+    • https://zpe.gov.pl/a/informatyczne-nosniki-danych/DdQCnHFzT
+Płyta CD – pojemność, masa, parametry optyczne
+    • https://www.edocpublish.com/resources-2/specifications/disc-size-and-capacity/
+    • https://www.target.com/p/verbatim-40x-80-minute-cd-r-with-branded-surface-25-pack/-/A-89115996
+Płyta DVD – pojemność, masa, standardy zapisu
+    • https://www.dvdnextcopy.com/dvd-storage-capacity
+    • https://www.bryk.pl/wypracowania/pozostale/informatyka/20023-rodzaje-nosnikow-danych.html
+    • https://pl.wikipedia.org/wiki/No%C5%9Bnik_danych
+Karta microSD 128 GB – wymiary, pojemność, technologie SDHC/SDXC
+    • https://americas.lexar.com/guide-to-microsd-card-sizes/
+    • https://pl.wikipedia.org/wiki/No%C5%9Bnik_danych
+    • https://www.delkomtech.pl/aktualnosci/nosniki-danych-ktore-wyrozniaja-sie-najwieksza-trwaloscia/
+    • https://www.walmart.com/ip/Sandisk-Ultra-128GB-microSD-HC-Flash-Memory-Card-1-Total-Count/910987325
+Statystyki książek – zakresy długości, masa egzemplarzy
+    • https://eliteauthors.com/blog/the-average-size-of-a-kindle-book/
+    • https://workmind.ai/average-cost-of-a-book/
+    • https://bookscouter.com/blog/how-much-does-a-book-weigh/
+
+Encyklopedia Britannica – liczba słów
+    • https://www.slideshare.net/slideshow/the-text-of-the-encyclopaedia-britannica-is-about-44-million-words-pdf/257050720
+Wikipedia – statystyki liczby artykułów i średniej długości tekstów
+    • https://pl.wikipedia.org/wiki/Wikipedia:Liczba_artyku%C5%82%C3%B3w_w_polskoj%C4%99zycznej_Wikipedii
+    • https://en.wikipedia.org/wiki/Wikipedia:Multilingual_statistics
+Obliczenia rozmiaru zdjęć 108 Mpix i danych wideo nieskompresowanych
+    • https://kalkulator.jednostek.pl/danych
+    • https://www.fuw.edu.pl/~szczytko/NT/Sprawozdania2010/Agnieszka_Pachuta_Nosniki_danych.pdf
+    • https://www.winxdvd.com/resource/4k-video-file-size-compress.htm
+YouTube – statystyki uploadów i bitrate materiałów wideo
+    • https://speedify.com/blog/better-streaming/optimum-youtube-bitrate-live-streaming-uploads/
